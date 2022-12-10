@@ -1,0 +1,9 @@
+{
+  "miniprogramRoot": "./",
+  "projectname": "ChatGPT",
+  "appid": "appid",
+  "setting": {
+    "es6": false,
+    "minified": false
+  }
+}
