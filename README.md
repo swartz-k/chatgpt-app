@@ -21,3 +21,6 @@ Golang 实现 session 的方式接入 ChatGPT 服务，详细逻辑可以参考 
 `yarn && yarn dev:weapp`
 
 2. 发布版本，需要修改 `app/config/prod.js`，指定 `env.URL`
+
+也可以扫码体验
+![image](docs/images/openai-app.png)
