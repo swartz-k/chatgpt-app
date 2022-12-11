@@ -1,7 +1,8 @@
 module.exports = {
   env: {
     NODE_ENV: '"development"',
-    URL: '"http://127.0.0.1:8092/chat"'
+    URL: '"http://127.0.0.1:8092/chat"',
+    WSURL: '"ws://127.0.0.1:8092/chat"'
   },
   defineConstants: {
   },

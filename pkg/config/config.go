@@ -1,8 +1,10 @@
 package config
 
 type Config struct {
-	Mode    string `json:"mode"`
-	Addr    string `json:"addr"`
+	Mode string `json:"mode"`
+	Addr string `json:"addr"`
+	// auth
+	Key     string `json:"key"`
 	Session string `json:"session"`
 }
 

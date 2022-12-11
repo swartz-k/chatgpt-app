@@ -16,7 +16,7 @@ func Test_apiSenMessage(t *testing.T) {
 	session := "ey"
 	a := NewApi(&session)
 	message := &valobj.Message{Message: "Where are you from?"}
-	r, err := a.SenMessage(message)
+	r, err := a.SendMessage(message)
 	assert.Nil(t, err)
 	msg := r.GetMessage()
 	assert.NotNil(t, msg)

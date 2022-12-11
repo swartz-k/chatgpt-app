@@ -85,7 +85,7 @@ func GetConversationResponse(content []byte) (*ConversationResponse, error) {
 }
 
 func (r *ConversationResponse) GetMessage() *string {
-	if r != nil && r.Message.Content.Parts != nil {
+	if r != nil && r.Message.Content.Parts != nil && len(r.Message.Content.Parts) > 0 {
 		return &r.Message.Content.Parts[0]
 	}
 	return nil

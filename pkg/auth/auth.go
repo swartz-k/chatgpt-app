@@ -1,117 +1,271 @@
-//package auth
-//
-//import (
-//	"crypto/tls"
-//	"github.com/swartz-k/chatgpt-app/pkg/log"
-//)
-//
-//type Conn struct {
-//	Email string
-//	Password string
-//	Proxy string
-//	SessionToken string
-//	AccessToken string
-//	Session tls.ClientSessionCache
-//	// for connect
-//	endpoint string
-//	headers map[string]string
-//}
-//
-//func (a *Conn) Begin() {
-//	log.V(100).Info("Beginning auth process")
-//	if a.Proxy != "" {
-//
-//	}
-//}
-//
-//func NewConn() *Conn {
-//	return &Conn{
-//		endpoint: "https://chat.openai.com/auth/login",
-//		headers: map[string]string{
-//			"Host":       "ask.openai.com",
-//			"Accept":     "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-//			"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
-//			"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-//			"Accept-Encoding": "gzip, deflate, br",
-//			"Connection":      "keep-alive",
-//		},
-//	}
-//}
-//
-//response = self.session.get(url=url, headers=headers)
-//if response.status_code == 200:
-//self.part_two()
-//else:
-//self.debugger.log("Error in part one")
-//self.debugger.log("Response: ", end="")
-//self.debugger.log(response.text)
-//self.debugger.log("Status code: ", end="")
-//self.debugger.log(response.status_code)
-//raise Exception("API error")
-//
-//func (c *Conn) csrf() {
-//	log.V(100).Info("Beginning CSRF")
-//	url := "https://chat.openai.com/api/auth/csrf"
-//	headers := {
-//		"Host": "ask.openai.com",
-//		"Accept": "*/*",
-//		"Connection": "keep-alive",
-//		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15 Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-//		"Referer": "https://chat.openai.com/auth/login",
-//		"Accept-Encoding": "gzip, deflate, br",
-//	}
-//}
-//response = self.session.get(url=url, headers=headers)
-//if response.status_code == 200 and "json" in response.headers["Content-Type"]:
-//csrf_token = response.json()["csrfToken"]
-//self.part_three(token=csrf_token)
-//
-//func (c *Conn) signin() {
-//	log.V(100).Info("Beginning sign in")
-//	url := "https://chat.openai.com/api/auth/signin/auth0?prompt=login"
-//
-//	payload := "callbackUrl=%2F&csrfToken={token}&json=true"
-//	headers := map[string]string{
-//		"Host": "ask.openai.com",
-//		"Origin": "https://chat.openai.com",
-//		"Connection": "keep-alive",
-//		"Accept": "*/*",
-//		"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
-//		"Referer": "https://chat.openai.com/auth/login",
-//		"Content-Length": "100",
-//		"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
-//		"Content-Type": "application/x-www-form-urlencoded",
-//	}
-//	response = self.session.post(url = url, headers = headers, data=payload)
-//	if response.status_code == 200 and
-//	"json"
-//	in
-//	response.headers["Content-Type"]:
-//	url = response.json()["url"]
-//	if url == "https://chat.openai.com/api/auth/error?error=OAuthSignin" or
-//	'error'
-//	in
-//url:
-//	self.debugger.log("You have been rate limited")
-//	raise
-//	Exception("You have been rate limited.")
-//	self.part_four(url = url)
-//	elif
-//	response.status_code == 400:
-//	self.debugger.log("Error in part three")
-//	self.debugger.log("Invalid credentials")
-//	raise
-//	Exception("Invalid credentials")
-//	else:
-//	self.debugger.log("Error in part three")
-//	self.debugger.log("Response: ", end = "")
-//	self.debugger.log(response.text)
-//	self.debugger.log("Status code: ", end = "")
-//	self.debugger.log(response.status_code)
-//	raise
-//	Exception("Unknown error")
-//
-//}
+package auth
+
+import (
+	"bytes"
+	"crypto/tls"
+	"encoding/json"
+	"fmt"
+	"github.com/swartz-k/chatgpt-app/pkg/log"
+	"io"
+	"net/http"
+	"net/http/cookiejar"
+	"net/url"
+)
+
+var client http.Client
+
+func init() {
+	jar, err := cookiejar.New(nil)
+	if err != nil {
+		log.Fatal("Got error while creating cookie jar %s", err.Error())
+	}
+	client = http.Client{
+		Jar: jar,
+	}
+}
+
+type Conn struct {
+	Email        string
+	Password     string
+	Proxy        string
+	SessionToken string
+	AccessToken  string
+	Session      tls.ClientSessionCache
+	// for connect
+	endpoint string
+	headers  map[string]string
+}
+
+func (a *Conn) Begin() {
+	log.V(100).Info("Beginning auth process")
+	if a.Proxy != "" {
+
+	}
+}
+
+func NewConn() *Conn {
+	return &Conn{
+		endpoint: "https://chat.openai.com/auth/login",
+		headers: map[string]string{
+			"Host":            "ask.openai.com",
+			"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+			"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+			"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+			"Accept-Encoding": "gzip, deflate, br",
+			"Connection":      "keep-alive",
+		},
+	}
+}
+
+func newReq(method, url string, headers map[string]string, payload []byte) (*http.Request, error) {
+	var req *http.Request
+	var err error
+	if payload == nil {
+		req, err = http.NewRequest(method, url, nil)
+	} else {
+		req, err = http.NewRequest(method, url, bytes.NewReader(payload))
+	}
+	if err != nil {
+		return nil, err
+	}
+	if headers != nil {
+		for k, v := range headers {
+			req.Header.Add(k, v)
+		}
+	}
+	return req, err
+}
+func doRequest(method, url string, headers map[string]string, payload []byte) ([]byte, error) {
+	req, err := newReq(method, url, headers, payload)
+	response, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer response.Body.Close()
+	content, err := io.ReadAll(response.Body)
+	if err != nil {
+		return nil, err
+	}
+	if response.StatusCode != 200 {
+		return nil, fmt.Errorf("code %d, content %s", response.StatusCode, content)
+	}
+	return content, nil
+}
+
+func (c *Conn) login() error {
+	headers := map[string]string{
+		"Host":            "ask.openai.com",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+		"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+		"Accept-Encoding": "gzip, deflate, br",
+		"Connection":      "keep-alive",
+	}
+	_, err := doRequest(http.MethodGet, "https://chat.openai.com/auth/login", headers, nil)
+	if err != nil {
+		return err
+	}
+	token, err := c.grabCSRFToken()
+	if err != nil {
+		return err
+	}
+	url, err := c.signin(token)
+	if err != nil {
+		return err
+	}
+
+	state, err := c.requestUrl(url)
+	if err != nil {
+		return err
+	}
+	err = c.loginPage(state)
+	if err != nil {
+		return err
+	}
+	err = c.postLogin(state)
+	return fmt.Errorf("state %s, err %+v", state, err)
+}
+
+func (c *Conn) grabCSRFToken() (string, error) {
+	log.V(100).Info("Beginning CSRF")
+	url := "https://chat.openai.com/api/auth/csrf"
+	headers := map[string]string{
+		"Host":            "ask.openai.com",
+		"Accept":          "*/*",
+		"Connection":      "keep-alive",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+		"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+		"Referer":         "https://chat.openai.com/auth/login",
+		"Accept-Encoding": "gzip, deflate, br",
+	}
+	result, err := doRequest(http.MethodGet, url, headers, nil)
+	if err != nil {
+		return "", err
+	}
+	log.V(100).Info("csrf resp %s", result)
+	var resp struct {
+		Token string `json:"csrfToken"`
+	}
+	err = json.Unmarshal(result, &resp)
+	if err != nil {
+		return "", err
+	}
+	return resp.Token, nil
+}
+
+func (c *Conn) signin(token string) (string, error) {
+	log.V(100).Info("Beginning sign in")
+	url := "https://chat.openai.com/api/auth/signin/auth0?prompt=login"
+
+	payload := fmt.Sprintf("callbackUrl=&csrfToken=%s&json=true", token)
+	url = fmt.Sprintf("%s&%s", url, payload)
+	headers := map[string]string{
+		"Host":            "ask.openai.com",
+		"Origin":          "https://chat.openai.com",
+		"Connection":      "keep-alive",
+		"Accept":          "*/*",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+		"Referer":         "https://chat.openai.com/auth/login",
+		"Content-Length":  "100",
+		"Accept-Language": "en-GB,en-US;q=0.9,en;q=0.8",
+		"Content-Type":    "application/x-www-form-urlencoded",
+	}
+	resp, err := doRequest(http.MethodPost, url, headers, []byte(payload))
+	if err != nil {
+		return "", err
+	}
+	log.V(100).Info("signin resp %s", resp)
+	var r struct {
+		Url string `json:"url"`
+	}
+	err = json.Unmarshal(resp, &r)
+	if err != nil {
+		return "", err
+	}
+	return r.Url, nil
+}
+
+func (c *Conn) requestUrl(u string) (string, error) {
+	log.V(100).Info("Beginning request url")
+
+	headers := map[string]string{
+		"Host":            "auth0.openai.com",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Connection":      "keep-alive",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+		"Accept-Language": "en-US,en;q=0.9",
+		"Referer":         "https://chat.openai.com/",
+	}
+	req, err := newReq(http.MethodGet, u, headers, nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	content, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	if resp.StatusCode != 302 {
+		return "", fmt.Errorf("resp conten %s, code %d", content, resp.StatusCode)
+	}
+	urlRaw, err := url.Parse(string(content))
+	if err != nil {
+		return "", err
+	}
+	return urlRaw.Query().Get("state"), nil
+}
+
+func (c *Conn) loginPage(state string) error {
+	log.V(100).Info("Beginning login page")
+	url := fmt.Sprintf("https://auth0.openai.com/u/login/identifier?state=%s", state)
+
+	headers := map[string]string{
+		"Host":            "auth0.openai.com",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"Connection":      "keep-alive",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+		"Accept-Language": "en-US,en;q=0.9",
+		"Referer":         "https://chat.openai.com/",
+	}
+	content, err := doRequest(http.MethodGet, url, headers, nil)
+	if err != nil {
+		return err
+	}
+	log.V(100).Info("login page resp %s", content)
+	// fixme: check captcha
+	return nil
+}
+
+func (c *Conn) postLogin(state string) error {
+	log.V(100).Info("Beginning post login")
+	u := fmt.Sprintf("https://auth0.openai.com/u/login/identifier?state=%s", state)
+	//emailEncoded := url_encode(self.email_address)
+	// fix captcha
+	//payload := fmt.Sprintf("state=%s&username=%s&js-available=true&webauthn-available=true&is-brave=false&webauthn-platform-available=true&action=default",
+	//	state, emailEncoded)
+
+	headers := map[string]string{
+		"Host":            "auth0.openai.com",
+		"Origin":          "https://auth0.openai.com",
+		"Connection":      "keep-alive",
+		"Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+		"User-Agent":      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.1 Safari/605.1.15",
+		"Referer":         fmt.Sprintf("https://auth0.openai.com/u/login/identifier?state=%s", state),
+		"Accept-Language": "en-US,en;q=0.9",
+		"Content-Type":    "application/x-www-form-urlencoded",
+	}
+	content, err := doRequest(http.MethodPost, u, headers, nil)
+	if err != nil {
+		return err
+	}
+	log.V(100).Info("post login resp %s", content)
+	return nil
+}
+
 //
 //func (c *Conn) oauth(url string) {
 //	log.V(100).Info("Beginning oauth signin")

@@ -38,6 +38,7 @@ var wsUpgrader = websocket.Upgrader{
 
 func websocketWrapper(f func(c *gin.Context, conn *websocket.Conn) error) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		log.V(100).Info("websocket path ")
 		c.Request.Header.Del("Origin")
 		conn, err := wsUpgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
@@ -74,8 +75,10 @@ func Register(route *gin.Engine) {
 		api.Handle(h.Method, h.Path, funcHandler)
 	}
 
-	ws := route.Group("/ws/v1")
-	var wsV1Route []WsRoute
+	ws := route.Group("/chat/ws/v1")
+	wsV1Route := []WsRoute{
+		{Path: "/wechat/message", Method: http.MethodGet, Handler: handler.SocketMessage},
+	}
 	for _, w := range wsV1Route {
 		ws.Handle(w.Method, w.Path, websocketWrapper(w.Handler))
 	}

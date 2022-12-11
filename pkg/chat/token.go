@@ -2,6 +2,7 @@ package chat
 
 import (
 	"encoding/json"
+	"fmt"
 	"github.com/swartz-k/chatgpt-app/entity/valobj"
 	"github.com/swartz-k/chatgpt-app/pkg/log"
 	expire "github.com/swartz-k/chatgpt-app/pkg/utils/map"
@@ -50,7 +51,14 @@ func getTokenBySession(session string) (*expire.ExpireRecord, error) {
 	if err != nil {
 		return nil, err
 	}
+	if r.Error != "" {
+		return nil, fmt.Errorf(r.Error)
+	}
 	log.V(100).Info("result %+v, err %+v", r, err)
 
 	return &expire.ExpireRecord{Expire: r.Expires, Value: r.AccessToken}, nil
+}
+
+func login(username, password string) (*expire.ExpireRecord, error) {
+	return nil, nil
 }

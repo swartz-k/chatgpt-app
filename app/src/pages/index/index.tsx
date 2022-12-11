@@ -49,6 +49,52 @@ function IndexView() {
     });
   }, []);
 
+  const socketSubmit = useCallback(
+   async (input:string) => {
+    setMessages([
+      ...messages,
+      ...[
+        { from: "I", content: input },
+        { from: "N", content: <Loading type="spinner" /> },
+      ],
+    ]);
+    Taro.pageScrollTo({ selector: ".scroll-view", offsetTop: 9999 });
+
+    Taro.connectSocket({
+      url: `${process.env.WSURL}/ws/v1/wechat/message`,
+      success: function () {
+        console.log('connect success')
+      }
+    }).then(task => {
+      task.onOpen(function () {
+        console.log('onOpen')
+        task.send({ data: JSON.stringify({message: input}) })
+      })
+      task.onMessage(function (resp) {
+        const msg = JSON.parse(resp.data)
+        console.log('onMessage: ', msg)
+        setMessages([
+          ...messages,
+          ...[
+            { from: "I", content: input },
+            { from: "N", content: msg.message },
+          ],
+        ]);
+        Taro.pageScrollTo({ selector: ".scroll-view", offsetTop: 9999 });
+
+      })
+      task.onError(function () {
+        console.log('onError')
+      })
+      task.onClose(function (e) {
+        console.log('onClose: ', e)
+      })
+    }).finally(() => {
+      setLoading(false)
+    })
+   }, [messages]
+  )
+
   const handleSubmit = useCallback(
     async (input: string) => {
       console.log("b", messages);
@@ -146,7 +192,7 @@ function IndexView() {
                 </Flex.Item>
                 <Flex.Item span={20}>
                   {typeof m.content === "string" ? (
-                    <Text>{m.content}</Text>
+                    <Text onClick={() => Taro.setClipboardData({data: m.content as string})}>{m.content}</Text>
                   ) : (
                     m.content
                   )}
@@ -184,7 +230,7 @@ function IndexView() {
         className="input-tab"
         onSubmit={(e) => {
           setQuestion("");
-          handleSubmit(e.detail.value?.message);
+          socketSubmit(e.detail.value?.message);
         }}
         style={{ paddingBottom: `${formBottom}px` }}
       >
